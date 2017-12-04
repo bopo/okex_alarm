@@ -17,6 +17,13 @@ var priceRecords = {
 	"eth": [],
 	"bch": []
 }
+var msgRecords = {
+	"btc": [],
+	"ltc": [],
+	"etc": [],
+	"eth": [],
+	"bch": []
+}
 var nextCoin = {
 	"btc": "ltc",
 	"ltc": "etc",
@@ -25,7 +32,7 @@ var nextCoin = {
 	"bch": "btc"
 }
 
-var records_length = 70 / 0.5;
+var records_length = 60 / 0.5;
 //
 function checkFluctuation(array, threshold){
 	var min = 99999;
@@ -38,7 +45,10 @@ function checkFluctuation(array, threshold){
 			min = array[i];
 		}
 	}
-	if((max - min) / array[array.length - 1] > threshold) {
+	var rate = (max - min) / array[array.length - 1];
+	console.log(max, min, array[array.length - 1], rate);
+	if(rate >= threshold) {
+		// console.log("true");
 		return true;
 	}
 	return false;
@@ -49,22 +59,24 @@ function checkPrice(coin, contract_type, threshold) {
 	// console.log("checking", coin, contract_type, threshold, url);
 	request.get(url, (error, response, body) => {
 		if(error) {
-			console.error(error);
-			sleep.msleep(100);
+			// console.error("error:", error);
+			sleep.msleep(200);
 			checkPrice(nextCoin[coin], contract_type, threshold);
 			return
 		}
-		// console.log(body);
+		msgRecords[coin].push(body);
 		body = JSON.parse(body);
+		console.log(coin, " last: ", body.ticker.last, " buy: ", body.ticker.buy, " sell: ", body.ticker.sell);
 		priceRecords[coin].push(body.ticker.last);
 		if(priceRecords[coin].length >= records_length) {
 			var flag = checkFluctuation(priceRecords[coin]);
 			if(flag) {
 				console.log("Alarm: ", coin);
 				console.log(priceRecords[coin]);
+				console.log(msgRecords[coin]);
 			}
 			priceRecords[coin].shift();
-			console.log(priceRecords[coin]);
+			msgRecords[coin].shift();
 		}
 		// body.ticker.last 
 		// if((body.ticker.last - lastPrices[coin])/ lastPrices[coin] >= threshold) {
@@ -77,10 +89,10 @@ function checkPrice(coin, contract_type, threshold) {
 		// 	console.log(body);
 		// }
 		// lastPrices[coin] = body.ticker.last;
-		sleep.msleep(100);
+		sleep.msleep(200);
 		checkPrice(nextCoin[coin], contract_type, threshold);
 	});
 
 }
 
-checkPrice("btc", "quarter", 0.005);
+checkPrice("btc", "quarter", 0.001);
